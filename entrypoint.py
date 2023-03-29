@@ -31,18 +31,18 @@ GITHUB_API_URL = os.environ.get("GITHUB_API_URL", "https://api.github.com")
 REPOSITORY = os.environ["GITHUB_REPOSITORY"]
 
 
+@dataclass
 class Response:
     """Basic urllib response object."""
-
-    def __init__(self, fp):
-        self._data = fp.read()
-        self.status = fp.status
-        self.reason = fp.reason
+    raw_data: bytes
+    status: int
+    reason: str
 
     @property
     def json(self):
+        """Returns the response as a json object."""
         try:
-            return _json.loads(self._data)
+            return _json.loads(self.raw_data)
         except _json.JSONDecodeError:
             return None
 
@@ -58,8 +58,8 @@ def request_github_api(endpoint: str, method="GET") -> Response:
             "Authorization": f"Bearer {GITHUB_TOKEN}",
         }
     )
-    with urllib.request.urlopen(req) as fp:
-        return Response(fp)
+    with urllib.request.urlopen(req) as resp:
+        return Response(resp.read, resp.status, resp.reason)
 
 
 def get_all_branches() -> list[str]:
@@ -69,10 +69,12 @@ def get_all_branches() -> list[str]:
 
 
 class GitHubDeployments:
+    """Methods related to GitHub deployments."""
+
     def __init__(self, data):
         self.name: str = data["environment"]
         self.branch: str = data["ref"]
-        self.id: int = data["id"]
+        self.deploy_id: int = data["id"]
 
         # We need to replace Z with UTC to make fromisoformat work
         created = data["created_at"].replace("Z", "+00:00")
@@ -87,7 +89,7 @@ class GitHubDeployments:
 
     def delete(self) -> bool:
         """Delete deployment and return True if requests succeeded, else False."""
-        ret = request_github_api(f"deployments/{self.id}", method="DELETE")
+        ret = request_github_api(f"deployments/{self.deploy_id}", method="DELETE")
         return ret.status == 204
 
     @classmethod
@@ -137,6 +139,8 @@ class OktetoEnv:
 
 
 def run():
+    """Main script to sync deployments."""
+
     # Fetch all required data before processing
     print("# Fetching list of branches...")
     github_branches = get_all_branches()
@@ -180,7 +184,7 @@ def run():
         # We need to remove the oldest deployments first, Github will only remove the active
         # deployments when all the inactive have been removed. The most recent is always active.
         for deployment in sorted(remove_list_github, key=attrgetter("created")):
-            print("Deleting GitHub deployment:", deployment.name, "=>", deployment.id)
+            print("Deleting GitHub deployment:", deployment.name, "=>", deployment.deploy_id)
             deployment.delete()
 
         # Remove any flagged Okteto environments
