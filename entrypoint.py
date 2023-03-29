@@ -59,7 +59,7 @@ def request_github_api(endpoint: str, method="GET") -> Response:
         }
     )
     with urllib.request.urlopen(req) as resp:
-        return Response(resp.read, resp.status, resp.reason)
+        return Response(resp.read(), resp.status, resp.reason)
 
 
 def get_all_branches() -> list[str]:
