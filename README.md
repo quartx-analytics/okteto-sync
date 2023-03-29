@@ -45,12 +45,13 @@ jobs:
           token: ${{ secrets.OKTETO_TOKEN }}
       
       - name: Run Okteto Sync
-        uses: quartx-analytics/okteto-sync@main
+        uses: quartx-analytics/okteto-sync@v1
         with:
           github-regex: "^Preview .+$"
           okteto-regex: "^(.+)-quartx$"
           dry-run: ${{ inputs.dry-run || 'false' }}
 ```
+Make sure to change the regex input variables to match your own deployment names and Okteto name.
 
 # License
 The scripts and documentation in this project are released under the [Apache License](LICENSE)
