@@ -30,13 +30,13 @@ on:
     inputs:
       dry-run:
         description: Run the script without making any changes.
-        required: false
-        type: string
+        default: false
+        type: boolean
   schedule:
     - cron: "0 23 */2 * *"
 
 jobs:
-  registry:
+  okteto-sync:
     runs-on: ubuntu-latest
     steps:
       - name: Login to Okteto
