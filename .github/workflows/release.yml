@@ -8,7 +8,13 @@ jobs:
   tag-it:
     runs-on: ubuntu-latest
     steps:
-      - name: Dump GitHub context
+      - name: Extract version data
+        id: versions
+        uses: battila7/get-version-action@v2
+
+      - name: Tag Action
+        uses: richardsimko/update-tag@v1
         env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "$GITHUB_CONTEXT"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.versions.outputs.major }}
