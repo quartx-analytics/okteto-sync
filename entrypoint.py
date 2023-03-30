@@ -170,6 +170,13 @@ def run():
             print(f"Okteto environment is missing for: {deploy.name}")
             remove_list_github.append(deploy)
 
+    # We need to remove the oldest deployments first, Github will only remove the active
+    # deployments when all the inactive have been removed. The most recent is always active.
+    for deployment in sorted(remove_list_github, key=attrgetter("created")):
+        print("Deleting GitHub deployment:", deployment.name, "=>", deployment.deploy_id)
+        if not DRY_RUN:
+            deployment.delete()
+
     print("")
     remove_list_okteto = []
     print("# Checking Okteto Environments")
@@ -180,16 +187,11 @@ def run():
             print(f"Branch '{okteto_env.branch}' missing for Okteto deployment: {okteto_env.name}")
             remove_list_okteto.append(okteto_env)
 
-    if not DRY_RUN:
-        # We need to remove the oldest deployments first, Github will only remove the active
-        # deployments when all the inactive have been removed. The most recent is always active.
-        for deployment in sorted(remove_list_github, key=attrgetter("created")):
-            print("Deleting GitHub deployment:", deployment.name, "=>", deployment.deploy_id)
-            deployment.delete()
 
-        # Remove any flagged Okteto environments
-        for okteto_env in remove_list_okteto:
-            print("Deleting Okteto deployment:", okteto_env.name)
+    # Remove any flagged Okteto environments
+    for okteto_env in remove_list_okteto:
+        print("Deleting Okteto deployment:", okteto_env.name)
+        if not DRY_RUN:
             okteto_env.delete()
 
 
