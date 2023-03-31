@@ -13,7 +13,7 @@ Regex used to select only the Okteto deployments. Default `"^Preview .+$"`.
 
 ## `okteto-regex`
 
-**Required** Regex used to extract the branch name from the Okteto deployment name. Example `"^(.+)-quartx$"`
+**Required** Regex used to extract the branch name from the Okteto deployment name. Example `"^deploy-(.+)-quartx$"`
 
 ## `github-token`
 
@@ -48,7 +48,7 @@ jobs:
         uses: quartx-analytics/okteto-sync@v1
         with:
           github-regex: "^Preview .+$"
-          okteto-regex: "^(.+)-quartx$"
+          okteto-regex: "^deploy-(.+)-quartx$"
           dry-run: ${{ inputs.dry-run || 'false' }}
 ```
 Make sure to change the regex input variables to match your own deployment names and Okteto name.
