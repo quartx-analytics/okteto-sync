@@ -26,8 +26,11 @@ GITHUB_TOKEN = sys.argv[2]
 OKTETO_DOMAIN = sys.argv[3]
 IGNORE_DEPLOYMENTS = sys.argv[4]
 
-print(IGNORE_DEPLOYMENTS)
+print(repr(IGNORE_DEPLOYMENTS))
 # sys.exit(1)
+
+IGNORE_DEPLOYMENTS = list(map(str.strip, "Staging, Production".split(",")))
+
 
 # Fetch vars from default environment variables
 GITHUB_API_URL = os.environ.get("GITHUB_API_URL", "https://api.github.com")
