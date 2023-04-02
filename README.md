@@ -1,27 +1,31 @@
 # Okteto Deployment Sync
 
-Synchronise GitHub deployments with Okteto deployments. Removes stale GitHub & Okteto deployments.
+Synchronise GitHub deployments with Okteto deployments.
 
-This was built to keep the Github deployment environments clean of inactive Okteto environments that no
-longer exists. Or to delete Github and Okteto environments when a GitHub branch has been deleted.
+This action will keep the GitHub deployed environments clean of inactive or stale Okteto preview environments.
+When a branch no longer exists for a deployment, both that deployment and Okteto preview environment will be deleted.
+If an Okteto preview environment has been deleted then the related GitHub deployment will be deleted too.
 
 # Inputs
 
-## `github-regex`
+## `dry-run`
 
-Regex used to select only the Okteto deployments. Default `"^Preview .+$"`.
-
-## `okteto-regex`
-
-**Required** Regex used to extract the branch name from the Okteto deployment name. Example `"^deploy-(.+)-quartx$"`
+Run the script without making any changes. Default `"false"`.
 
 ## `github-token`
 
 The token used to authenticate with GitHub. Defaults to `github.token`.
 
-## `dry-run`
+## `okteto-domain`
 
-Run the script without making any changes. Default `"false"`.
+The domain where Okteto is hosted. Defaults to `cloud.okteto.net`."
+
+## `ignore-deployments`
+
+List of long-lived deployments to ignore. This is not required, but is recommended.
+As GitHub keeps track of the full deployment history for an environment. This script can
+really slow down when scanning long-lived deployments.
+
 
 ## Example usage
 ```yaml
@@ -45,13 +49,11 @@ jobs:
           token: ${{ secrets.OKTETO_TOKEN }}
       
       - name: Run Okteto Sync
-        uses: quartx-analytics/okteto-sync@v1
+        uses: quartx-analytics/okteto-sync@v2
         with:
-          github-regex: "^Preview .+$"
-          okteto-regex: "^deploy-(.+)-quartx$"
           dry-run: ${{ inputs.dry-run || 'false' }}
+          ignore-deployments: Staging, Production
 ```
-Make sure to change the regex input variables to match your own deployment names and Okteto name.
 
 # License
 The scripts and documentation in this project are released under the [Apache License](LICENSE)

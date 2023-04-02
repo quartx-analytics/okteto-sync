@@ -1,21 +1,22 @@
 name: "Okteto Sync"
 description: "Synchronise GitHub deployments with Okteto deployments. Removes stale GitHub & Okteto deployments."
 inputs:
-  github-token:
-    description: "The GitHub access token."
-    required: false
-    default: ${{ github.token }}
-  github-regex:
-    description: "Regex used to extract the branch name from the GitHub deployment name."
-    required: false
-    default: "^Preview .+$"
-  okteto-regex:
-    description: "Regex used to extract the branch name from the Okteto deployment name."
-    required: true
   dry-run:
     description: "Run the script without making any changes."
     required: false
     default: false
+  github-token:
+    description: "The GitHub access token."
+    required: false
+    default: ${{ github.token }}
+  okteto-domain:
+    description: "The domain where Okteto is hosted. Defaults to Okteto cloud."
+    required: false
+    default: "cloud.okteto.net"
+  ignore-deployments:
+    description: "Comma separated list of deployments to ignore."
+    required: false
+    default: ""
 outputs:
   artifact-file:
     description: "The filename for the mender artifact file"
@@ -26,8 +27,8 @@ runs:
   args:
     - ${{ inputs.dry-run }}
     - ${{ inputs.github-token }}
-    - ${{ inputs.github-regex }}
-    - ${{ inputs.okteto-regex }}
+    - ${{ inputs.okteto-domain }}
+    - ${{ inputs.ignore-deployments }}
 branding:
   color: "green"
   icon: "grid"
