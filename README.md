@@ -4,7 +4,8 @@ Synchronise GitHub deployments with Okteto deployments.
 
 This action will keep the GitHub deployed environments clean of inactive or stale Okteto preview environments.
 When a branch no longer exists for a deployment, both that deployment and Okteto preview environment will be deleted.
-If an Okteto preview environment has been deleted then the related GitHub deployment will be deleted too.
+If an Okteto preview environment has been deleted then the related GitHub deployment will be deleted too. The only
+requirement is that the deployments on GitHub contain a url pointing to the Okteto preview environment.
 
 # Inputs
 

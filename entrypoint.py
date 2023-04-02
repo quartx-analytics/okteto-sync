@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=E1310
 
 """
 Okteto Sync
@@ -9,9 +10,9 @@ Removes stale GitHub & Okteto deployments.
 
 # Standard lib
 from dataclasses import dataclass, field
+from typing import Iterator, Union
 from operator import attrgetter
 from datetime import datetime
-from typing import Iterator
 import urllib.request
 import json as _json
 import subprocess
@@ -26,7 +27,7 @@ OKTETO_DOMAIN = sys.argv[3]
 IGNORE_DEPLOYMENTS = sys.argv[4]
 
 print(IGNORE_DEPLOYMENTS)
-sys.exit(1)
+# sys.exit(1)
 
 # Fetch vars from default environment variables
 GITHUB_API_URL = os.environ.get("GITHUB_API_URL", "https://api.github.com")
@@ -73,11 +74,11 @@ def get_all_branches() -> list[str]:
 @dataclass
 class GitHubDeployment:
     """Methods related to GitHub deployments."""
-    id: int
+    deploy_id: int
     name: str
     branch: str
     task: str
-    created: datetime | str
+    created: Union[datetime, str]
     url: str = field(init=False, default="")
     okteto: "OktetoDeployment" = field(init=False, default=None)
 
@@ -89,7 +90,7 @@ class GitHubDeployment:
 
     def is_okteto_deployment(self) -> bool:
         """Return True if deployment matches the okteto url."""
-        statuses = request_github_api(f"deployments/{self.id}/statuses")
+        statuses = request_github_api(f"deployments/{self.deploy_id}/statuses")
         for status in statuses.json:
             url = status["environment_url"]
             if OKTETO_DOMAIN in url:
@@ -99,7 +100,7 @@ class GitHubDeployment:
 
     def delete(self) -> bool:
         """Delete deployment and return True if requests succeeded, else False."""
-        ret = request_github_api(f"deployments/{self.id}", method="DELETE")
+        ret = request_github_api(f"deployments/{self.deploy_id}", method="DELETE")
         return ret.status == 204
 
     @classmethod
@@ -163,6 +164,8 @@ def connect_deployments(github: list[GitHubDeployment], okteto: list[OktetoDeplo
 
 
 def run():
+    """Main script to sync deployments."""
+
     # Fetch all required data before processing
     print("# Fetching Branches & Deployments")
     github_branches = get_all_branches()
@@ -189,7 +192,7 @@ def run():
     # We need to remove the oldest deployments first, GitHub will only remove the active
     # deployments when all the inactive have been removed. The most recent is always active.
     for deployment in sorted(remove_list_github, key=attrgetter("created")):
-        print("Deleting GitHub deployment:", deployment.name, "=>", deployment.id)
+        print("Deleting GitHub deployment:", deployment.name, "=>", deployment.deploy_id)
         if not DRY_RUN:
             deployment.delete()
 
