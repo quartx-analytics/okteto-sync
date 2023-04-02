@@ -24,13 +24,7 @@ import os
 DRY_RUN = str(sys.argv[1]).lower() in ("1", "true", "on")
 GITHUB_TOKEN = sys.argv[2]
 OKTETO_DOMAIN = sys.argv[3]
-IGNORE_DEPLOYMENTS = sys.argv[4]
-
-print(repr(IGNORE_DEPLOYMENTS))
-# sys.exit(1)
-
-IGNORE_DEPLOYMENTS = list(map(str.strip, "Staging, Production".split(",")))
-
+IGNORE_DEPLOYMENTS = list(filter(None, map(str.strip, sys.argv[4].replace("\n", ",").split(","))))
 
 # Fetch vars from default environment variables
 GITHUB_API_URL = os.environ.get("GITHUB_API_URL", "https://api.github.com")
