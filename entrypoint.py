@@ -21,7 +21,7 @@ import os
 
 
 # Fetch vars from Command line
-DRY_RUN = str(sys.argv[1]).lower() in ("1", "true", "on")
+DRY_RUN = str(sys.argv[1]).lower() in ("yes", "true", "y", "1", "on")
 GITHUB_TOKEN = sys.argv[2]
 OKTETO_DOMAIN = sys.argv[3]
 IGNORE_DEPLOYMENTS = list(filter(None, map(str.strip, sys.argv[4].replace("\n", ",").split(","))))
