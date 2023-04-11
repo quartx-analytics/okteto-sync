@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# pylint: disable=E1310
+# pylint: disable=E1310 R0903
 
 """
 Okteto Sync
@@ -32,6 +32,16 @@ IGNORE_DEPLOYMENTS = list(filter(None, map(str.strip, sys.argv[4].replace("\n", 
 GITHUB_API_URL = os.environ.get("GITHUB_API_URL", "https://api.github.com")
 REPOSITORY = os.environ["GITHUB_REPOSITORY"]
 PER_PAGE = 100
+
+
+class TC:
+    """Ascii color codes."""
+    GREEN = "\033[92m"
+    BLUE = "\033[94m"
+    CYAN = "\033[96m"
+    YELLOW = "\033[93m"
+    RED = "\033[91m"
+    RESET = "\033[0m"
 
 
 class Response:
@@ -208,45 +218,45 @@ def run():
     """Main script to sync deployments."""
 
     # Fetch all required data before processing
-    print("# Fetching Branches & Deployments")
+    print(TC.GREEN + "Fetching Branches & Deployments", TC.RESET)
     github_branches = get_all_branches()
-    print("GitHub Branches:", github_branches)
+    print(TC.CYAN + "GitHub Branches:", TC.RESET, github_branches)
     github_deployments = list(GitHubDeployment.get_okteto_deployments())
-    print("GitHub Deployments:", [env.name for env in github_deployments])
+    print(TC.CYAN + "GitHub Deployments:", TC.RESET, [env.name for env in github_deployments])
     okteto_deployments = list(OktetoDeployment.get_all())
-    print("Okteto Deployments:", [env.name for env in okteto_deployments])
+    print(TC.CYAN + "Okteto Deployments:", TC.RESET, [env.name for env in okteto_deployments])
     connect_deployments(github_deployments, okteto_deployments)
     remove_list_github, remove_list_okteto = [], []
 
     print("")
-    print("# Checking Github Environments")
+    print(TC.GREEN + "Checking Github Environments", TC.RESET)
     for deploy in github_deployments:
         if deploy.okteto is None:
-            print(f"Okteto deployment missing for: {deploy.name}")
+            print(TC.CYAN + "Okteto deployment missing for:", TC.RESET, deploy.name)
             remove_list_github.append(deploy)
 
         elif deploy.branch not in github_branches:
-            print(f"Branch missing for deployment: {deploy.name}")
+            print(TC.CYAN + "Branch missing for deployment:", TC.RESET, deploy.name)
             remove_list_github.append(deploy)
             remove_list_okteto.append(deploy.okteto)
 
     # We need to remove the oldest deployments first, GitHub will only remove the active
     # deployments when all the inactive have been removed. The most recent is always active.
     for deployment in sorted(remove_list_github, key=attrgetter("created")):
-        print("Deleting GitHub deployment:", deployment.name, "=>", deployment.deploy_id)
+        print(TC.YELLOW + "Deleting:", TC.RESET, deployment.name, "=>", deployment.deploy_id)
         if not DRY_RUN:
             deployment.delete()
 
     print("")
-    print("# Checking Okteto Environments")
+    print(TC.GREEN + "Checking Okteto Environments", TC.RESET)
     for deploy in okteto_deployments:
         if deploy.github is None:
-            print(f"Github deployment missing for: {deploy.name}")
+            print(TC.CYAN + "Github deployment missing for:", TC.RESET, deploy.name)
             remove_list_okteto.append(deploy)
 
     # Remove any flagged Okteto environments
     for okteto_env in remove_list_okteto:
-        print("Deleting Okteto deployment:", okteto_env.name)
+        print(TC.YELLOW + "Deleting:", TC.RESET, okteto_env.name)
         if not DRY_RUN:
             okteto_env.delete()
 
