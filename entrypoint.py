@@ -10,7 +10,8 @@ Removes stale GitHub & Okteto deployments.
 
 # Standard lib
 from dataclasses import dataclass, field
-from typing import Iterator, Union
+from typing import Iterator, Union, Any
+from urllib import parse as urlparse
 from operator import attrgetter
 from datetime import datetime
 import urllib.request
@@ -18,6 +19,7 @@ import json as _json
 import subprocess
 import sys
 import os
+import re
 
 
 # Fetch vars from Command line
@@ -29,16 +31,19 @@ IGNORE_DEPLOYMENTS = list(filter(None, map(str.strip, sys.argv[4].replace("\n", 
 # Fetch vars from default environment variables
 GITHUB_API_URL = os.environ.get("GITHUB_API_URL", "https://api.github.com")
 REPOSITORY = os.environ["GITHUB_REPOSITORY"]
+PER_PAGE = 100
 
 
-@dataclass
 class Response:
     """Basic urllib response object."""
-    raw_data: bytes
-    status: int
-    reason: str
+    links_regex = re.compile(r'<([^>]+)>.*?rel="([\w\s]+)".*')
 
-    @property
+    def __init__(self, raw_resp):
+        self.raw_data: bytes = raw_resp.read()
+        self.status: int = raw_resp.status
+        self.reason: str = raw_resp.reason
+        self.headers: dict[str: str] = raw_resp.headers
+
     def json(self):
         """Returns the response as a json object."""
         try:
@@ -46,26 +51,65 @@ class Response:
         except _json.JSONDecodeError:
             return None
 
+    @property
+    def links(self) -> dict[str, dict[str, str]]:
+        """Parse the link header and return as structured data."""
+        if "link" not in self.headers:
+            return {}
 
-def request_github_api(endpoint: str, method="GET") -> Response:
+        links = {}
+        # Use regex to parse the rel links
+        for match in self.links_regex.finditer(self.headers["link"]):
+            link = match.group(1)
+            rel = match.group(2)
+
+            # Extract url params for easier access
+            query_params = dict(urlparse.parse_qsl(urlparse.urlsplit(link).query))
+
+            # Construct standardized link structure
+            for true_rel in rel.split(" "):
+                links[true_rel] = {"url": link, "rel": true_rel, **query_params}
+
+        return links
+
+
+def request_github_api(endpoint: str, params: dict = None, method="GET") -> Response:
     """Make web request to GitHub API."""
+    query = urlparse.urlencode(params or {})
     req = urllib.request.Request(
-        url=f"{GITHUB_API_URL}/repos/{REPOSITORY}/{endpoint}",
+        url=f"{GITHUB_API_URL}/repos/{REPOSITORY}/{endpoint}?{query}",
         method=method,
         headers={
             "X-GitHub-Api-Version": "2022-11-28",
             "Accept": "application/vnd.github+json",
             "Authorization": f"Bearer {GITHUB_TOKEN}",
-        }
+        },
     )
     with urllib.request.urlopen(req) as resp:
-        return Response(resp.read(), resp.status, resp.reason)
+        return Response(resp)
+
+
+def get_paged_resp(url: str, params: dict[str, Any] = None) -> Iterator[dict]:
+    """Return an iterator of paged results, looping until all resources are collected."""
+    params = params or {}
+    params.update(page="1")
+    params.setdefault("per_page", min(PER_PAGE, 100))
+
+    while True:
+        resp = request_github_api(url, params=params)
+        yield from resp.json()
+
+        # Continue with next page if one is found
+        if "next" in resp.links:
+            page = resp.links["next"]["page"]
+            params[page] = page
+        else:
+            break
 
 
 def get_all_branches() -> list[str]:
     """Return a list of all branches in current repo."""
-    req = request_github_api("branches")
-    return [data["name"] for data in req.json]
+    return [data["name"] for data in get_paged_resp("branches")]
 
 
 @dataclass
@@ -87,8 +131,9 @@ class GitHubDeployment:
 
     def is_okteto_deployment(self) -> bool:
         """Return True if deployment matches the okteto url."""
+        # We only need to check the first page of results. Anymore and things will really start slowing down
         statuses = request_github_api(f"deployments/{self.deploy_id}/statuses")
-        for status in statuses.json:
+        for status in statuses.json():
             url = status["environment_url"]
             if OKTETO_DOMAIN in url:
                 self.url = url
@@ -103,8 +148,7 @@ class GitHubDeployment:
     @classmethod
     def get_okteto_deployments(cls) -> Iterator["GitHubDeployment"]:
         """Return a list of all deployments matching deploy regex."""
-        deployments = request_github_api("deployments")
-        for deployment in deployments.json:
+        for deployment in get_paged_resp("deployments"):
             obj = cls(
                 deployment["id"],
                 deployment["environment"],
