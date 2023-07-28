@@ -180,7 +180,7 @@ class OktetoDeployment:
     sleeping: bool
     github: "GitHubDeployment" = field(init=False, default=None)
 
-    def __init__(self, name: str, scope: str, sleeping: str):
+    def __init__(self, name: str, scope: str, sleeping: str, **_):
         self.name = name
         self.scope = scope
         self.sleeping = sleeping.lower() in ("1", "on", "true")
@@ -197,11 +197,19 @@ class OktetoDeployment:
             ["okteto", "preview", "list"],
             capture_output=True, check=True, encoding="utf8"
         )
-        # We need to scrap the first row as it contains the headers
-        if envs := proc.stdout.strip().split("\n")[1:]:
-            for env in envs:
-                cleaned = filter(None, env.split(" "))
-                yield cls(*cleaned)
+
+        headings = None
+        for row in proc.stdout.strip().split("\n"):
+            # The data only starts after the heading
+            # We also use the hading to create structured data
+            if headings is None and "Name" in row and "Scope" in row:
+                headings = list(map(str.lower, filter(None, row.split(" "))))
+
+            elif headings:
+                # Combine row with headers to create structured data
+                cleaned = filter(None, row.split(" "))
+                structured = dict(zip(headings, cleaned))
+                yield cls(**structured)
 
 
 def connect_deployments(github: list[GitHubDeployment], okteto: list[OktetoDeployment]):
