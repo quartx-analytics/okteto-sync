@@ -112,7 +112,7 @@ def get_paged_resp(url: str, params: dict[str, Any] = None) -> Iterator[dict]:
         # Continue with next page if one is found
         if "next" in resp.links:
             page = resp.links["next"]["page"]
-            params[page] = page
+            params["page"] = page
         else:
             break
 
